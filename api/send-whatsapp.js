@@ -1,6 +1,6 @@
 // CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Atau ganti dengan domain spesifik Anda
+  'Access-Control-Allow-Origin': 'https://www.jejakmufassir.my.id', // Atau ganti dengan domain spesifik Anda
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
 };
