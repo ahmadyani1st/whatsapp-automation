@@ -1,0 +1,17 @@
+{
+  "name": "jejakmufassir-whatsapp-api",
+  "version": "1.0.0",
+  "description": "WhatsApp notification API for Jejak Mufassir orders",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "engines": {
+    "node": ">=14.x"
+  }
+}
