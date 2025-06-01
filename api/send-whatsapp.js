@@ -1,6 +1,6 @@
 // CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://www.jejakmufassir.my.id',
+  'Access-Control-Allow-Origin': '*', // Atau ganti dengan domain spesifik Anda
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
 };
@@ -25,17 +25,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // API Key validation (optional - uncomment if needed)
-    // const apiKey = req.headers['x-api-key'];
-    // const expectedApiKey = 'your-secure-whatsapp-key-123'; // Ganti dengan key Anda
-    
-    // if (apiKey !== expectedApiKey) {
-    //   return res.status(401).json({ 
-    //     success: false, 
-    //     error: 'Unauthorized' 
-    //   });
-    // }
-
     const orderData = req.body;
 
     // Validate required fields
@@ -127,36 +116,36 @@ ${orderData.namaDropshipper ? `🏪 *Info Dropshipper:*
 // Function to send WhatsApp message via Fonnte
 async function sendWhatsAppMessage(phoneNumber, message) {
   try {
-    // Masukkan token Fonnte Anda di sini
+    // Token Fonnte Anda
     const FONNTE_TOKEN = 'oLvQFQGrg6nGpFa9uFQo';
     
-    // Ensure phone number format is correct for Fonnte
+    // Format phone number untuk Fonnte
     const formattedPhone = formatPhoneNumber(phoneNumber);
     
     const response = await fetch('https://api.fonnte.com/send', {
       method: 'POST',
       headers: {
-        'Authorization': FONNTE_TOKEN,
-        'Content-Type': 'application/json'
+        'Authorization': FONNTE_TOKEN
       },
-      body: JSON.stringify({
-        target: formattedPhone,
-        message: message,
-        countryCode: '62' // Indonesia country code
+      body: new URLSearchParams({
+        'target': formattedPhone,
+        'message': message
       })
     });
 
     const result = await response.json();
     
+    console.log('Fonnte Response:', result); // For debugging
+    
     // Check if Fonnte response is successful
-    if (response.ok && result.status) {
+    if (result.status === true || result.status === 'true') {
       return { 
         success: true, 
-        messageId: result.id || result.message_id,
+        messageId: result.id || result.message_id || 'sent',
         detail: result.detail || 'Message sent successfully'
       };
     } else {
-      throw new Error(result.reason || result.message || 'Failed to send via Fonnte API');
+      throw new Error(result.reason || result.message || result.detail || 'Failed to send via Fonnte API');
     }
     
   } catch (error) {
