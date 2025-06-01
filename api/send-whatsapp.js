@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'https://www.jejakmufassir.my.id',
@@ -8,6 +6,11 @@ const corsHeaders = {
 };
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  Object.keys(corsHeaders).forEach(key => {
+    res.setHeader(key, corsHeaders[key]);
+  });
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).json({ success: true });
@@ -22,16 +25,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    // API Key validation (opsional untuk keamanan)
-    const apiKey = req.headers['x-api-key'];
-    const expectedApiKey = process.env.WHATSAPP_API_KEY || 'your-secure-whatsapp-key-123';
+    // API Key validation (optional - uncomment if needed)
+    // const apiKey = req.headers['x-api-key'];
+    // const expectedApiKey = 'your-secure-whatsapp-key-123'; // Ganti dengan key Anda
     
-    if (apiKey !== expectedApiKey) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      });
-    }
+    // if (apiKey !== expectedApiKey) {
+    //   return res.status(401).json({ 
+    //     success: false, 
+    //     error: 'Unauthorized' 
+    //   });
+    // }
 
     const orderData = req.body;
 
@@ -39,26 +42,26 @@ export default async function handler(req, res) {
     if (!orderData || !orderData.invoiceNumber) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Invalid order data' 
+        error: 'Invalid order data - invoiceNumber is required' 
       });
     }
 
     // Format WhatsApp message
     const message = formatWhatsAppMessage(orderData);
 
-    // Send WhatsApp message
-    const result = await sendWhatsAppMessage('087849484894', message);
+    // Send WhatsApp message via Fonnte
+    const result = await sendWhatsAppMessage('089675712795', message);
 
     if (result.success) {
       return res.status(200).json({ 
         success: true, 
         message: 'WhatsApp notification sent successfully',
-        messageId: result.messageId
+        messageId: result.messageId || result.id
       });
     } else {
       return res.status(500).json({ 
         success: false, 
-        error: result.error 
+        error: result.error || 'Failed to send WhatsApp message'
       });
     }
 
@@ -74,32 +77,33 @@ export default async function handler(req, res) {
 // Function to format WhatsApp message
 function formatWhatsAppMessage(orderData) {
   const formatCurrency = (amount) => {
+    if (!amount) return '0';
     return parseInt(amount).toLocaleString('id-ID');
   };
 
   return `🛍️ *PESANAN BARU JEJAK MUFASSIR*
 
 📋 *Detail Pesanan:*
-• Invoice: ${orderData.invoiceNumber}
-• Produk: ${orderData.productName}
-• Jenis: ${orderData.jenisProduk}
-• Jumlah: ${orderData.quantity}
+• Invoice: ${orderData.invoiceNumber || '-'}
+• Produk: ${orderData.productName || '-'}
+• Jenis: ${orderData.jenisProduk || '-'}
+• Jumlah: ${orderData.quantity || '1'}
 • SKU: ${orderData.sku || '-'}
 • Harga: Rp ${formatCurrency(orderData.productPrice)}
 
 👤 *Data Pembeli:*
-• Nama: ${orderData.fullName}
-• No. HP: ${orderData.phoneNumber}
-• Email: ${orderData.email}
+• Nama: ${orderData.fullName || '-'}
+• No. HP: ${orderData.phoneNumber || '-'}
+• Email: ${orderData.email || '-'}
 
 📍 *Alamat Pengiriman:*
-${orderData.address}
-${orderData.city}
+${orderData.address || '-'}
+${orderData.city || '-'}
 
 🚚 *Pengiriman & Pembayaran:*
-• Kurir: ${orderData.kurir}
-• Metode Bayar: ${orderData.paymentMethod}
-• Status: ${orderData.status}
+• Kurir: ${orderData.kurir || '-'}
+• Metode Bayar: ${orderData.paymentMethod || '-'}
+• Status: ${orderData.status || 'Pending'}
 
 ${orderData.voucher && orderData.voucher !== 'Pilih Voucher' ? `🎫 *Voucher:* ${orderData.voucher}` : ''}
 
@@ -107,7 +111,7 @@ ${orderData.voucher && orderData.voucher !== 'Pilih Voucher' ? `🎫 *Voucher:* 
 Rp ${formatCurrency(orderData.totalPayment)}
 
 ⏰ *Waktu Pesanan:*
-${orderData.timestamp}
+${orderData.timestamp || new Date().toLocaleString('id-ID')}
 
 ${orderData.catatan ? `📝 *Catatan Pembeli:*
 ${orderData.catatan}` : ''}
@@ -120,19 +124,43 @@ ${orderData.namaDropshipper ? `🏪 *Info Dropshipper:*
 *Jejak Mufassir - Admin Dashboard*`;
 }
 
-// Function to send WhatsApp message
+// Function to send WhatsApp message via Fonnte
 async function sendWhatsAppMessage(phoneNumber, message) {
   try {
+    // Masukkan token Fonnte Anda di sini
+    const FONNTE_TOKEN = 'c6wjweefzc9F3DSVxHuaeGJ5VY9NHAjQcNDcJ7oR9s65to';
     
-    // Opsi 4: Menggunakan service custom Anda sendiri
-    if (process.env.CUSTOM_WHATSAPP_API_URL) {
-      return await sendViaCustomAPI(phoneNumber, message);
+    // Ensure phone number format is correct for Fonnte
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    
+    const response = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': FONNTE_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        target: formattedPhone,
+        message: message,
+        countryCode: '62' // Indonesia country code
+      })
+    });
+
+    const result = await response.json();
+    
+    // Check if Fonnte response is successful
+    if (response.ok && result.status) {
+      return { 
+        success: true, 
+        messageId: result.id || result.message_id,
+        detail: result.detail || 'Message sent successfully'
+      };
+    } else {
+      throw new Error(result.reason || result.message || 'Failed to send via Fonnte API');
     }
     
-    throw new Error('No WhatsApp service configured');
-    
   } catch (error) {
-    console.error('Error sending WhatsApp:', error);
+    console.error('Error sending WhatsApp via Fonnte:', error);
     return { 
       success: false, 
       error: error.message 
@@ -140,28 +168,24 @@ async function sendWhatsAppMessage(phoneNumber, message) {
   }
 }
 
-// Custom API Implementation (sesuaikan dengan API Anda)
-async function sendViaCustomAPI(phoneNumber, message) {
-  const response = await fetch(process.env.CUSTOM_WHATSAPP_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.CUSTOM_WHATSAPP_API_TOKEN}`
-    },
-    body: JSON.stringify({
-      phone: phoneNumber,
-      message: message
-    })
-  });
-
-  const result = await response.json();
+// Helper function to format phone number for Fonnte
+function formatPhoneNumber(phoneNumber) {
+  if (!phoneNumber) return '';
   
-  if (response.ok && result.success) {
-    return { 
-      success: true, 
-      messageId: result.messageId 
-    };
-  } else {
-    throw new Error(result.error || 'Failed to send via Custom API');
+  // Remove all non-numeric characters
+  let formatted = phoneNumber.replace(/\D/g, '');
+  
+  // Handle Indonesian phone numbers
+  if (formatted.startsWith('08')) {
+    // Convert 08xxx to 628xxx
+    formatted = '62' + formatted.substring(1);
+  } else if (formatted.startsWith('8')) {
+    // Convert 8xxx to 628xxx
+    formatted = '62' + formatted;
+  } else if (!formatted.startsWith('62')) {
+    // Add 62 prefix if not present
+    formatted = '62' + formatted;
   }
+  
+  return formatted;
 }
