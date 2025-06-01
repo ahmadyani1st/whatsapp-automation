@@ -128,7 +128,7 @@ ${orderData.namaDropshipper ? `🏪 *Info Dropshipper:*
 async function sendWhatsAppMessage(phoneNumber, message) {
   try {
     // Masukkan token Fonnte Anda di sini
-    const FONNTE_TOKEN = 'c6wjweefzc9F3DSVxHuaeGJ5VY9NHAjQcNDcJ7oR9s65to';
+    const FONNTE_TOKEN = 'oLvQFQGrg6nGpFa9uFQo';
     
     // Ensure phone number format is correct for Fonnte
     const formattedPhone = formatPhoneNumber(phoneNumber);
